@@ -106,7 +106,10 @@ function Get-HpVlan {
 			$EvalParams.Regex          = [regex] "^\ name\ (.+)"
 			$Eval                      = HelperEvalRegex @EvalParams
 			
-			
+			# Description
+			$EvalParams.ObjectProperty = "Description"
+			$EvalParams.Regex          = [regex] "^\ description\ (.+)"
+			$Eval                      = HelperEvalRegex @EvalParams
 			
 		}
 	}	
