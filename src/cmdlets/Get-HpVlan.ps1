@@ -73,12 +73,16 @@ function Get-HpVlan {
 			$EvalParams = @{}
 			$EvalParams.StringToEval     = $line
 			
-			<#
-			# SwitchPort
-			$EvalParams.Regex          = [regex] '^\ switchport$'
+			
+			# DhcpRelayEnabled
+			$EvalParams.Regex          = [regex] '^\ dhcp\ select\ relay$'
 			$Eval                      = HelperEvalRegex @EvalParams
-			if ($Eval) { $NewInterface.Switchport.Enabled = $true }
-			#>
+			if ($Eval) { $NewObject.DhcpRelayEnabled = $true }
+			
+			# DhcpRelayList
+			$EvalParams.Regex          = [regex] "^\ dhcp\ relay\ server-address\ (?<ip>$IpRx)"
+			$Eval                      = HelperEvalRegex @EvalParams
+			if ($Eval) { $NewObject.DhcpRelayList += $Eval.Groups['ip'].Value }
 			
 			# IpAddress
 			$EvalParams.Regex = [regex] "^\ ip\ address\ (?<ip>$IpRx)\ (?<mask>$IpRx)"

@@ -17,5 +17,3 @@ ipmo .\*.psd1
 $global:ConfigDir = "c:\temp\aps"
 $global:ConfigFile = $ConfigDir + '\hp-core.txt'
 $Global:Config = gc $ConfigFile
-
-Get-HpVlan $Config -verbose | ft -autosize
