@@ -169,6 +169,7 @@ $Output = $CmdletHeader
 
 foreach ($l in $(ls $CmdletPath)) {
     $Contents  = gc $l.FullName
+    Write-Verbose $l.FullName
     $Output   += $FunctionHeader
     $Output   += $l.BaseName
     $Output   += "`r`n`r`n"
