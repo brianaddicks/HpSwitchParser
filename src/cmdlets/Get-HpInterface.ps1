@@ -17,6 +17,7 @@ function Get-HpInterface {
 	$TotalLines = $ShowSupportOutput.Count
 	$i          = 0 
 	$StopWatch  = [System.Diagnostics.Stopwatch]::StartNew() # used by Write-Progress so it doesn't slow the whole function down
+	$DefinedVlans = Get-HpVlan $ShowSupportOutput
 	
 	$ReturnObject = @()
 	
@@ -77,6 +78,36 @@ function Get-HpInterface {
 			$EvalParams.Regex          = [regex] "^\ undo\ port\ trunk\ permit\ vlan\ 1"
 			$Eval                      = HelperEvalRegex @EvalParams
 			if ($Eval) { $NewObject.PermittedVlans = $NewObject.PermittedVlans | ? { $_ -ne 1 } }
+			
+			# PermittedVlans
+			$EvalParams.Regex          = [regex] "^\ port\ trunk\ permit\ vlan\ (?<vlans>.+)"
+			$Eval                      = HelperEvalRegex @EvalParams -ReturnGroupNum 1
+			if ($Eval) {
+				Write-Verbose "$VerbosePrefix $Eval"
+				$Vlans = $Eval
+				if ($Vlans -eq 'all') {
+					foreach ($DefinedVlan in $DefinedVlans) {
+						$NewObject.PermittedVlans += $DefinedVlan.Id
+					}
+				} else {
+					foreach ($v in $Vlans.Split()) {
+						if ($v -match "to") {
+							$Range = $true
+						} else {
+							if ($Range) {
+								for ($vCount = $LastVlan + 1;$vCount -le $v;$vCount++) {
+									$NewObject.PermittedVlans += $vCount
+									$Range = $false
+								}
+							} else {
+								$NewObject.PermittedVlans += [int]$v
+								$LastVlan = [int]$v
+							}
+						}
+					}
+				}
+				$NewObject.PermittedVlans = $NewObject.PermittedVlans | Select -Unique
+			}
 			
 			# IpAddress
 			$EvalParams.Regex = [regex] "^\ ip\ address\ (?<ip>$IpRx)\ (?<mask>$IpRx)"
