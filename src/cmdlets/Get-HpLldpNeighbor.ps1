@@ -1,4 +1,4 @@
-function Get-HpInterface {
+function Get-HpLldpNeighbor {
     [CmdletBinding()]
 	<#
         .SYNOPSIS
@@ -10,14 +10,14 @@ function Get-HpInterface {
 		[array]$ShowSupportOutput
 	)
 	
-	$VerbosePrefix = "Get-HpInterface: "
+	$VerbosePrefix = "Get-HpLldpNeighbor: "
 	
 	$IpRx = [regex] "(\d+\.){3}\d+"
+	$HpInterfaceRx = [regex] "[a-zA-Z\-]+?\d+\/\d+\/\d+\/\d+"
 	
 	$TotalLines = $ShowSupportOutput.Count
 	$i          = 0 
 	$StopWatch  = [System.Diagnostics.Stopwatch]::StartNew() # used by Write-Progress so it doesn't slow the whole function down
-	$DefinedVlans = Get-HpVlan $ShowSupportOutput
 	
 	$ReturnObject = @()
 	
@@ -30,7 +30,6 @@ function Get-HpInterface {
 			$PercentComplete = [math]::truncate($i / $TotalLines * 100)
 	        Write-Progress -Activity "Reading Support Output" -Status "$PercentComplete% $i/$TotalLines" -PercentComplete $PercentComplete
 	        $StopWatch.Reset()
-			$StopWatch.Start()
 		}
 		
 		if ($line -eq "") { continue }
@@ -38,10 +37,10 @@ function Get-HpInterface {
 		###########################################################################################
 		# New Object
 		
-		$Regex = [regex] "^interface\ (.+)"
+		$Regex = [regex] "^LLDP\ neighbor\-information\ of\ port\ \d+\[(?<port>$HpInterfaceRx)\]\:`$"
 		$Match = HelperEvalRegex $Regex $line -ReturnGroupNum 1
 		if ($Match) {
-			$NewObject       = New-Object -TypeName HpSwitchParser.Interface
+			$NewObject       = New-Object -TypeName HpSwitchParser.Neighbor
 			$NewObject.Name  = $Match
 			$ReturnObject   += $NewObject
 		}
@@ -49,20 +48,11 @@ function Get-HpInterface {
 		if ($NewObject) {
 			
 			###########################################################################################
-			# End of Section
-			$Regex = [regex] "^#"
-			$Match = HelperEvalRegex $Regex $line
-			if ($Match) {
-				$NewObject = $null
-				continue
-			}
-			
-			###########################################################################################
 			# Bool Properties and Properties that need special processing
 			# Eval Parameters for this section
 			$EvalParams = @{}
 			$EvalParams.StringToEval     = $line
-			
+			<#
 			
 			# DhcpRelayEnabled
 			$EvalParams.Regex          = [regex] '^\ dhcp\ select\ relay$'
@@ -126,7 +116,7 @@ function Get-HpInterface {
 			if ($Eval) {
 				$NewObject.Pvid            = [int]$Eval
 			}
-			
+			#>
 			###########################################################################################
 			# Regular Properties
 			
@@ -138,22 +128,13 @@ function Get-HpInterface {
 			###############################################
 			# General Properties
 			
-			# Description
-			$EvalParams.ObjectProperty = "Description"
-			$EvalParams.Regex          = [regex] "^\ description\ (.+)"
-			$Eval                      = HelperEvalRegex @EvalParams
-			
-			# PortLinkType
-			$EvalParams.ObjectProperty = "PortLinkType"
-			$EvalParams.Regex          = [regex] "^\ port\ link-type\ (.+)"
-			$Eval                      = HelperEvalRegex @EvalParams
-			
-			# LinkAggMode
-			$EvalParams.ObjectProperty = "LinkAggMode"
-			$EvalParams.Regex          = [regex] "^\ link-aggregation\ mode\ (.+)"
+			# ChassisId
+			$EvalParams.ObjectProperty = "ChassisId"
+			$EvalParams.Regex          = [regex] "^Chassis\ ID\ +\:\ (.+)"
 			$Eval                      = HelperEvalRegex @EvalParams
 			
 		}
-	}	
+	}
+	Write-Progress -Activity "Reading Support Output" -Status "Complete" -PercentComplete 100 -Completed	
 	return $ReturnObject
 }
