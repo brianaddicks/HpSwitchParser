@@ -13,7 +13,7 @@ function Get-HpLldpNeighbor {
 	$VerbosePrefix = "Get-HpLldpNeighbor: "
 	
 	$IpRx = [regex] "(\d+\.){3}\d+"
-	$HpInterfaceRx = [regex] "[a-zA-Z\-]+?\d+\/\d+\/\d+\/\d+"
+	$HpInterfaceRx = [regex] "[a-zA-Z\-]+?\d+\/\d+\/\d+(\/\d+)?"
 	
 	$TotalLines = $ShowSupportOutput.Count
 	$i          = 0 
@@ -37,11 +37,11 @@ function Get-HpLldpNeighbor {
 		###########################################################################################
 		# New Object
 		
-		$Regex = [regex] "^LLDP\ neighbor\-information\ of\ port\ \d+\[(?<port>$HpInterfaceRx)\]\:`$"
+		$Regex = [regex] "^LLDP\ neighbor\-information\ of\ port\ \d+\[($HpInterfaceRx)\]\:`$"
 		$Match = HelperEvalRegex $Regex $line -ReturnGroupNum 1
 		if ($Match) {
 			$NewObject       = New-Object -TypeName HpSwitchParser.Neighbor
-			$NewObject.Name  = $Match
+			$NewObject.LocalPort  = $Match
 			$ReturnObject   += $NewObject
 		}
 		
@@ -52,71 +52,7 @@ function Get-HpLldpNeighbor {
 			# Eval Parameters for this section
 			$EvalParams = @{}
 			$EvalParams.StringToEval     = $line
-			<#
-			
-			# DhcpRelayEnabled
-			$EvalParams.Regex          = [regex] '^\ dhcp\ select\ relay$'
-			$Eval                      = HelperEvalRegex @EvalParams
-			if ($Eval) { $NewObject.DhcpRelayEnabled = $true }
-			
-			# DhcpRelayList
-			$EvalParams.Regex          = [regex] "^\ dhcp\ relay\ server-address\ (?<ip>$IpRx)"
-			$Eval                      = HelperEvalRegex @EvalParams
-			if ($Eval) { $NewObject.DhcpRelayList += $Eval.Groups['ip'].Value }
-			
-			# Undo Vlan 1
-			$EvalParams.Regex          = [regex] "^\ undo\ port\ trunk\ permit\ vlan\ 1"
-			$Eval                      = HelperEvalRegex @EvalParams
-			if ($Eval) { $NewObject.PermittedVlans = $NewObject.PermittedVlans | ? { $_ -ne 1 } }
-			
-			# PermittedVlans
-			$EvalParams.Regex          = [regex] "^\ port\ trunk\ permit\ vlan\ (?<vlans>.+)"
-			$Eval                      = HelperEvalRegex @EvalParams -ReturnGroupNum 1
-			if ($Eval) {
-				Write-Verbose "$VerbosePrefix $Eval"
-				$Vlans = $Eval
-				if ($Vlans -eq 'all') {
-					foreach ($DefinedVlan in $DefinedVlans) {
-						$NewObject.PermittedVlans += $DefinedVlan.Id
-					}
-				} else {
-					foreach ($v in $Vlans.Split()) {
-						if ($v -match "to") {
-							$Range = $true
-						} else {
-							if ($Range) {
-								for ($vCount = $LastVlan + 1;$vCount -le $v;$vCount++) {
-									$NewObject.PermittedVlans += $vCount
-									$Range = $false
-								}
-							} else {
-								$NewObject.PermittedVlans += [int]$v
-								$LastVlan = [int]$v
-							}
-						}
-					}
-				}
-				$NewObject.PermittedVlans = $NewObject.PermittedVlans | Select -Unique
-			}
-			
-			# IpAddress
-			$EvalParams.Regex = [regex] "^\ ip\ address\ (?<ip>$IpRx)\ (?<mask>$IpRx)"
-			$Eval             = HelperEvalRegex @EvalParams
-			if ($Eval) {
-				Write-Verbose "$VerbosePrefix Ip Found"
-				$NewObject.IpAddress = $Eval.Groups['ip'].Value
-				$NewObject.IpAddress += '/' + (ConvertTo-MaskLength $Eval.Groups['mask'].Value)
-			}
-			
-			
-			# TrunkPvid
-			$EvalParams.ObjectProperty = "Pvid"
-			$EvalParams.Regex          = [regex] "^\ port\ trunk\ pvid\ vlan\ (\d+)"
-			$Eval                      = HelperEvalRegex @EvalParams -ReturnGroupNum 1
-			if ($Eval) {
-				$NewObject.Pvid            = [int]$Eval
-			}
-			#>
+
 			###########################################################################################
 			# Regular Properties
 			
@@ -130,11 +66,30 @@ function Get-HpLldpNeighbor {
 			
 			# ChassisId
 			$EvalParams.ObjectProperty = "ChassisId"
-			$EvalParams.Regex          = [regex] "^Chassis\ ID\ +\:\ (.+)"
+			$EvalParams.Regex          = [regex] "^\ +Chassis\ ID\ +\:\ (.+)"
 			$Eval                      = HelperEvalRegex @EvalParams
 			
+			# RemotePort
+			$EvalParams.ObjectProperty = "RemotePort"
+			$EvalParams.Regex          = [regex] "^\ +Port\ ID\ +\:\ (.+)"
+			$Eval                      = HelperEvalRegex @EvalParams
+			
+			# SystemName
+			$EvalParams.ObjectProperty = "SystemName"
+			$EvalParams.Regex          = [regex] "^\ +System\ name\ +\:\ (.+)"
+			$Eval                      = HelperEvalRegex @EvalParams
+			
+			# IpAddress
+			$EvalParams.ObjectProperty = "IpAddress"
+			$EvalParams.Regex          = [regex] "^\ +Management\ address\ +\:\ (.+)"
+			$Eval                      = HelperEvalRegex @EvalParams
+			
+			# Capabilities
+			$EvalParams.ObjectProperty = "Capabilities"
+			$EvalParams.Regex          = [regex] "^\ +System\ capabilities\ supported\ +\:\ (.+)"
+			$Eval                      = HelperEvalRegex @EvalParams
 		}
 	}
 	Write-Progress -Activity "Reading Support Output" -Status "Complete" -PercentComplete 100 -Completed	
-	return $ReturnObject
+	return $ReturnObject | Select * -Unique
 }

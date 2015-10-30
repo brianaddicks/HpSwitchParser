@@ -8,13 +8,15 @@ using System.Xml;
 using System.Web;
 
 namespace HpSwitchParser {
-	
-    public class Neighbor {
-		public string LocalPort;
-		public string ChassisId;
-		public string RemotePort;
-		public string SystemName;
-		public string IpAddress;
-		public string Capabilities;
+	public class AclRule {
+		public int Number;
+		public string Action;
+		public string Protocol;
+		
+		public string Source;
+		public string SourcePort;
+		
+		public string Destination;
+		public string DestinationPort;
     }
 }

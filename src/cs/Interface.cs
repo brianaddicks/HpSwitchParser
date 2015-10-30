@@ -34,19 +34,5 @@ namespace HpSwitchParser {
 			this.PermittedVlans = new List<int> {1};
 			this.Pvid            = 1;
 		}
-		/*
-		public SecurityRule () {
-			this.SourceAddress = new List<string> {"any"};
-			this.SourceUser = new List<string> {"any"};
-			this.HipProfile = new List<string> {"any"};
-			this.DestinationAddress = new List<string> {"any"};
-			this.Application = new List<string> {"application-default"};
-			this.UrlCategory = new List<string> {"any"};
-			this.Allow = true;
-			this.LogAtSessionEnd = true;
-      		this.RuleType = "universal";
-		}
-		*/
-    
     }
 }
