@@ -47,64 +47,61 @@ function Get-HpAccessList {
 		}
 		
 		if ($NewObject) {
-			<#
-			###########################################################################################
-			# End of Section
-			$Regex = [regex] "^#"
-			$Match = HelperEvalRegex $Regex $line
-			if ($Match) {
-				$NewObject = $null
-				continue
-			}
 			
-			###########################################################################################
-			# Bool Properties and Properties that need special processing
-			# Eval Parameters for this section
 			$EvalParams = @{}
-			$EvalParams.StringToEval     = $line
+			$EvalParams.StringToEval = $line
 			
-			
-			# DhcpRelayEnabled
-			$EvalParams.Regex          = [regex] '^\ dhcp\ select\ relay$'
-			$Eval                      = HelperEvalRegex @EvalParams
-			if ($Eval) { $NewObject.DhcpRelayEnabled = $true }
-			
-			# DhcpRelayList
-			$EvalParams.Regex          = [regex] "^\ dhcp\ relay\ server-address\ (?<ip>$IpRx)"
-			$Eval                      = HelperEvalRegex @EvalParams
-			if ($Eval) { $NewObject.DhcpRelayList += $Eval.Groups['ip'].Value }
-			
-			# IpAddress
-			$EvalParams.Regex = [regex] "^\ ip\ address\ (?<ip>$IpRx)\ (?<mask>$IpRx)"
-			$Eval             = HelperEvalRegex @EvalParams
+			$EvalParams.Regex = [regex] "(?mx)
+				^\ rule
+				\ (?<number>\d+)
+				\ (?<action>permit|deny)
+				(\ (?<protocol>ospf|udp|tcp|icmp|ip))?
+				
+				# Source
+				(\ 
+					source\ (?<sourcenet>$IpRx)\ (?<sourcemask>$IpRx|0)
+				)?
+				
+				# Destination
+				(\ 
+					destination\ (?<destnet>$IpRx)\ (?<destmask>$IpRx|0)
+				)?
+				
+				#Destination Port
+				(\ (
+					destination-port\ eq\ (?<destport>\w+)|
+					icmp-type\ (?<destport>\w+)
+				))?"
+					
+			$Eval = HelperEvalRegex @EvalParams
 			if ($Eval) {
-				Write-Verbose "$VerbosePrefix Ip Found"
-				$NewObject.IpAddress = $Eval.Groups['ip'].Value
-				$NewObject.IpAddress += '/' + (ConvertTo-MaskLength $Eval.Groups['mask'].Value)
+				$NewRule          = New-Object -TypeName HpSwitchParser.AclRule
+				$NewObject.Rules += $NewRule
+				
+				$NewRule.Number   = $Eval.Groups['number'].Value
+				$NewRule.Action   = $Eval.Groups['action'].Value
+				$NewRule.Protocol = $Eval.Groups['protocol'].Value
+				
+				$NewRule.Source  = $Eval.Groups['sourcenet'].Value
+				$Mask = $Eval.Groups['sourcemask']
+				if ($Mask.Success) {
+					if ($Mask.Value -eq '0') { 
+						$NewRule.Source += '/32'
+					} else {
+						$NewRule.Source += '/' + (32 - [int](ConvertTo-MaskLength $Mask.Value)) }
+				}
+				
+				$NewRule.Destination  = $Eval.Groups['destnet'].Value
+				$Mask = $Eval.Groups['destmask']
+				if ($Mask.Success) {
+					if ($Mask.Value -eq '0') { 
+						$NewRule.Destination += '/32'
+					} else {
+						$NewRule.Destination += '/' + (32 - [int](ConvertTo-MaskLength $Mask.Value)) }
+				}
+				
+				$NewRule.DestinationPort = $Eval.Groups['destport'].Value
 			}
-			
-			
-			###########################################################################################
-			# Regular Properties
-			
-			# Update eval Parameters for remaining matches
-			$EvalParams.VariableToUpdate = ([REF]$NewObject)
-			$EvalParams.ReturnGroupNum   = 1
-			$EvalParams.LoopName         = 'fileloop'
-			
-			###############################################
-			# General Properties
-			
-			# Name
-			$EvalParams.ObjectProperty = "Name"
-			$EvalParams.Regex          = [regex] "^\ name\ (.+)"
-			$Eval                      = HelperEvalRegex @EvalParams
-			
-			# Description
-			$EvalParams.ObjectProperty = "Description"
-			$EvalParams.Regex          = [regex] "^\ description\ (.+)"
-			$Eval                      = HelperEvalRegex @EvalParams
-			#>
 		}
 	}	
 	return $ReturnObject

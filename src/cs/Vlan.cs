@@ -16,5 +16,7 @@ namespace HpSwitchParser {
 		public string IpAddress;
 		public List<string> DhcpRelayList;
 		public bool DhcpRelayEnabled;
+		public int AclIn;
+		public int AclOut;
     }
 }

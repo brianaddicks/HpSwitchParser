@@ -93,6 +93,18 @@ function Get-HpVlan {
 				$NewObject.IpAddress += '/' + (ConvertTo-MaskLength $Eval.Groups['mask'].Value)
 			}
 			
+			# PacketFilters (ACLs)
+			$EvalParams.Regex = [regex] "^\ packet-filter\ (?<acl>\d+)\ (?<direction>\w+)"
+			$Eval             = HelperEvalRegex @EvalParams
+			if ($Eval) {
+				Write-Verbose "$VerbosePrefix Acl Found"
+				$Direction = $Eval.Groups['direction'].Value
+				switch ($Direction) {
+					inbound { $NewObject.AclIn = $Eval.Groups['acl'].Value }
+					default { Throw "Acl direction $Direction" }
+				}
+			}
+			
 			
 			###########################################################################################
 			# Regular Properties
