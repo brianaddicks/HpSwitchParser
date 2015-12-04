@@ -7,10 +7,11 @@ using System.Security.Cryptography.X509Certificates;
 using System.Xml;
 using System.Web;
 
-namespace HpSwitchParser {
-	public class AccessList {
-		public string Name { get; set; }
-		public int Number { get; set; }
-		public List<AclRule> Rules { get; set; }
+namespace FortiShell {
+	
+    public class Address {
+		public string Name;
+		public string Value;
+		public string Interface;
     }
 }
