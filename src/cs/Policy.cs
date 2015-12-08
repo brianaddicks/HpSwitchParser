@@ -21,5 +21,10 @@ namespace FortiShell {
         public bool Inbound;
         public bool Outbound;
         public string VpnTunnel;
+        public bool Disabled;
+        public bool ProfileStatus;
+        public bool LogTraffic;
+        public bool NatEnabled;
+        public string Profile;
     }
 }

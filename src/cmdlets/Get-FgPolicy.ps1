@@ -88,6 +88,34 @@ function Get-FgPolicy {
 					$NewObject.Outbound = $true
 				}
 				
+				# Disabled
+				$EvalParams.Regex          = [regex] "^\s+set\ status\ (.+)"
+				$Eval                      = HelperEvalRegex @EvalParams -ReturnGroupNum 1
+				if ($Eval -eq "disable") {
+					$NewObject.Disabled = $true
+				}
+				
+				# ProfileStatus
+				$EvalParams.Regex          = [regex] "^\s+set\ profile-status\ (.+)"
+				$Eval                      = HelperEvalRegex @EvalParams -ReturnGroupNum 1
+				if ($Eval -eq "enable") {
+					$NewObject.ProfileStatus = $true
+				}
+				
+				# LogTraffic
+				$EvalParams.Regex          = [regex] "^\s+set\ logtraffic\ (.+)"
+				$Eval                      = HelperEvalRegex @EvalParams -ReturnGroupNum 1
+				if ($Eval -eq "enable") {
+					$NewObject.LogTraffic = $true
+				}
+				
+				# Nat
+				$EvalParams.Regex          = [regex] "^\s+set\ nat\ (.+)"
+				$Eval                      = HelperEvalRegex @EvalParams -ReturnGroupNum 1
+				if ($Eval -eq "enable") {
+					$NewObject.NatEnabled = $true
+				}
+				
 				###########################################################################################
 				# Regular Properties
 				
@@ -134,6 +162,11 @@ function Get-FgPolicy {
 				# VpnTunnel
 				$EvalParams.Regex          = [regex] '^\s+set\ vpntunnel\ "(.+?)"'
 				$EvalParams.ObjectProperty = "VpnTunnel"
+				$Eval                      = HelperEvalRegex @EvalParams
+				
+				# Profile
+				$EvalParams.Regex          = [regex] '^\s+set\ profile\ "(.+?)"'
+				$EvalParams.ObjectProperty = "Profile"
 				$Eval                      = HelperEvalRegex @EvalParams
 			}
 		} else {
