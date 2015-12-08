@@ -61,7 +61,7 @@ function Get-FgPolicy {
 			
 			
 			# New Address Object
-			$EvalParams.Regex          = [regex] '^\s+edit\ \d+'
+			$EvalParams.Regex          = [regex] '^\s+edit\ (\d+)'
 			$Eval                      = HelperEvalRegex @EvalParams -ReturnGroupNum 1
 			if ($Eval) {
 				$NewObject       = New-Object FortiShell.Policy
@@ -74,53 +74,67 @@ function Get-FgPolicy {
 				###########################################################################################
 				# Special Properties
 				
-				<#
-				# Tcp Port Range
-				$EvalParams.Regex          = [regex] "^\s+set\ (?<protocol>udp|tcp)-portrange\ (?<port>.+)"
-				$Eval                      = HelperEvalRegex @EvalParams
-				if ($Eval) {
-					$Protocol = $Eval.Groups["protocol"].Value
-					Write-Verbose $Protocol
-					$List  = @()
-					$Split = ($Eval.Groups["port"].Value).Trim().Split()
-					Write-Verbose "port: $($Eval.Groups["port"].Value.Split())"
-					foreach ($s in $Split) {
-						Write-Verbose "s $s"
-						$Range = ($s.split(":"))[0]
-						Write-Verbose "Range $Range"
-						$DashSplit = $Range.Split('-')
-						if ($DashSplit[0] -eq $DashSplit[1]) {
-							$Range = $DashSplit[0]
-						}
-						$NewObject.Value += "$Protocol/$Range"
-					}
-				}#>
+				# Inbound
+				$EvalParams.Regex          = [regex] "^\s+set\ inbound\ (.+)"
+				$Eval                      = HelperEvalRegex @EvalParams -ReturnGroupNum 1
+				if ($Eval -eq "enable") {
+					$NewObject.Inbound = $true
+				}
+				
+				# Outbound
+				$EvalParams.Regex          = [regex] "^\s+set\ outbound\ (.+)"
+				$Eval                      = HelperEvalRegex @EvalParams -ReturnGroupNum 1
+				if ($Eval -eq "enable") {
+					$NewObject.Outbound = $true
+				}
 				
 				###########################################################################################
 				# Regular Properties
-				
-				<#
-				set srcintf "internal"
-				set dstintf "wan1"
-					set srcaddr "Grta server network"             
-					set dstaddr "Forest Park Local Network"             
-				set action ipsec
-				set schedule "always"
-					set service "ANY"             
-				set inbound enable
-				set outbound enable
-				set vpntunnel "ForestPark VPN"
-#>
 				
 				# Update eval Parameters for remaining matches
 				$EvalParams.VariableToUpdate = ([REF]$NewObject)
 				$EvalParams.ReturnGroupNum   = 1
 				$EvalParams.LoopName         = 'fileloop'
-					
+				
+				# SourceInterface	
 				$EvalParams.Regex          = [regex] '^\s+set\ srcintf\ "(.+?)"'
 				$EvalParams.ObjectProperty = "SourceInterface"
 				$Eval                      = HelperEvalRegex @EvalParams
 				
+				# SourceInterface	
+				$EvalParams.Regex          = [regex] '^\s+set\ dstintf\ "(.+?)"'
+				$EvalParams.ObjectProperty = "DestinationInterface"
+				$Eval                      = HelperEvalRegex @EvalParams
+				
+				# SourceAddress	
+				$EvalParams.Regex          = [regex] '^\s+set\ srcaddr\ "(.+?)"'
+				$EvalParams.ObjectProperty = "SourceAddress"
+				$Eval                      = HelperEvalRegex @EvalParams
+				
+				# DestinationAddress
+				$EvalParams.Regex          = [regex] '^\s+set\ dstaddr\ "(.+?)"'
+				$EvalParams.ObjectProperty = "DestinationAddress"
+				$Eval                      = HelperEvalRegex @EvalParams
+				
+				# Action	
+				$EvalParams.Regex          = [regex] '^\s+set\ action\ (.+)'
+				$EvalParams.ObjectProperty = "Action"
+				$Eval                      = HelperEvalRegex @EvalParams
+				
+				# Schedule
+				$EvalParams.Regex          = [regex] '^\s+set\ schedule\ "(.+?)"'
+				$EvalParams.ObjectProperty = "Schedule"
+				$Eval                      = HelperEvalRegex @EvalParams
+				
+				# Service
+				$EvalParams.Regex          = [regex] '^\s+set\ service\ "(.+?)"'
+				$EvalParams.ObjectProperty = "Service"
+				$Eval                      = HelperEvalRegex @EvalParams
+				
+				# VpnTunnel
+				$EvalParams.Regex          = [regex] '^\s+set\ vpntunnel\ "(.+?)"'
+				$EvalParams.ObjectProperty = "VpnTunnel"
+				$Eval                      = HelperEvalRegex @EvalParams
 			}
 		} else {
 			continue

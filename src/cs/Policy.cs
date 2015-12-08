@@ -9,7 +9,7 @@ using System.Web;
 
 namespace FortiShell {
 	
-    public class FirewallPolicy {
+    public class Policy {
         public int Number;
         public string SourceInterface;
         public string DestinationInterface;
