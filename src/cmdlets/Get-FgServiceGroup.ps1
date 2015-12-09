@@ -80,7 +80,7 @@ function Get-FgServiceGroup {
 				if ($Eval) {
 					$Split = $Eval.Split()
 					foreach ($s in $Split) {
-						$NewObject.Value += $s -replace '"','
+						$NewObject.Value += $s -replace '"',''
 					}
 				}
 				
