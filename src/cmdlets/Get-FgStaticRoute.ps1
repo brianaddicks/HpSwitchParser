@@ -1,4 +1,4 @@
-function Get-FgServiceGroup {
+function Get-FgStaticRoute {
     [CmdletBinding()]
 	<#
         .SYNOPSIS
@@ -10,7 +10,8 @@ function Get-FgServiceGroup {
 		[array]$ShowSupportOutput
 	)
 	
-	$VerbosePrefix = "Get-FgServiceGroup: "
+	$IpRx = [regex] "(\d+\.){3}\d+"
+	$VerbosePrefix = "Get-FgStaticRoute: "
 	
 	$TotalLines = $ShowSupportOutput.Count
 	$i          = 0 
@@ -35,7 +36,7 @@ function Get-FgServiceGroup {
 		###########################################################################################
 		# Section Start
 		
-		$Regex = [regex] "^config\ firewall\ service\ group"
+		$Regex = [regex] "^config\ router\ static"
 		$Match = HelperEvalRegex $Regex $line
 		if ($Match) {
 			$Section = $true
@@ -64,24 +65,23 @@ function Get-FgServiceGroup {
 			$EvalParams.Regex          = [regex] '^\s+edit\ "(.+?)"'
 			$Eval                      = HelperEvalRegex @EvalParams -ReturnGroupNum 1
 			if ($Eval) {
-				$NewObject       = New-Object FortiShell.ServiceGroup
-				$NewObject.Name  = $Eval
-				$ReturnObject   += $NewObject
-				Write-Verbose "object created: $($NewObject.Name)"
+				$NewObject         = New-Object FortiShell.Route
+				$NewObject.Number  = $Eval
+				$ReturnObject     += $NewObject
+				Write-Verbose "object created: $($NewObject.Number)"
 			}
 			if ($NewObject) {
 				
 				###########################################################################################
 				# Special Properties
 				
-				# Members
-				$EvalParams.Regex          = [regex] "^\s+set\ member\ (.+)"
-				$Eval                      = HelperEvalRegex @EvalParams -ReturnGroupNum 1
+				# Tcp Port Range
+				$EvalParams.Regex          = [regex] "^\s+set\ dst\ (?<network>$IpRx)\ (?<mask>$IpRx)"
+				$Eval                      = HelperEvalRegex @EvalParams
 				if ($Eval) {
-					$Split = $Eval.Split()
-					foreach ($s in $Split) {
-						$NewObject.Value += $s -replace '"','
-					}
+					$NewObject.Destination  = $Eval.Groups['network'].Value
+					$NewObject.Destination += '/'
+					$NewObject.Destination += (ConvertTo-MaskLength $Eval.Groups['mask'].Value)
 				}
 				
 				###########################################################################################
@@ -91,6 +91,11 @@ function Get-FgServiceGroup {
 				$EvalParams.VariableToUpdate = ([REF]$NewObject)
 				$EvalParams.ReturnGroupNum   = 1
 				$EvalParams.LoopName         = 'fileloop'
+					
+				# SourceInterface	
+				$EvalParams.Regex          = [regex] '^\s+set\ device\ "(.+?)"'
+				$EvalParams.ObjectProperty = "Interface"
+				$Eval                      = HelperEvalRegex @EvalParams
 			}
 		} else {
 			continue
